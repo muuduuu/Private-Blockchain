@@ -7,6 +7,7 @@ from backend.healthcare_config import (
     TIER_CERTIFICATION_HEALTHCARE as TIER_CERTIFICATION,
     TIER_LATENCY_TARGET
 )
+from backend.config import ValidatorScoringConfig
 class Validator:
     
     def __init__(self, validator_id: str, stake: float, tier: Tier):
