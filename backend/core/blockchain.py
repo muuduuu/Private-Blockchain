@@ -1,9 +1,8 @@
 from typing import List, Optional, Dict, Any
-from core.block import Block
-from core.transaction import Transaction
-from core.mempool import Mempool
-from config import BlockchainConfig, ValidatorConfig
-
+from backend.core.block import Block
+from backend.core.transaction import Transaction
+from backend.core.mempool import Mempool
+from backend.healthcare_config import HealthcareBlockchainConfig as BlockchainConfig 
 class Blockchain:
 
     def __init__(self):

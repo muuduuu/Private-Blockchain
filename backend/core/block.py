@@ -1,9 +1,9 @@
 import time
 import json
 from typing import List, Dict, Any, Optional
-from core.transaction import Transaction
+from backend.utils.hashing import merkle_root, verify_merkle_proof
+from backend.core.transaction import Transaction
 from utils.crypto import sha256_hash
-from utils.hashing import merkle_root
 
 class Block:
     

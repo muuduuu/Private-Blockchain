@@ -1,0 +1,12 @@
+# Core cryptography & security
+cryptography==41.0.7
+pynacl==1.5.0
+python-dotenv==1.0.0
+
+# Web frontend
+streamlit==1.28.1
+plotly==5.17.0
+pandas==2.1.1
+numpy==1.24.3
+
+

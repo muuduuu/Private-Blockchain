@@ -1,8 +1,12 @@
 import time
 from typing import Optional, Dict, Any
-from utils.crypto import generate_keypair, sha256_hash
-from config import ValidatorScoringConfig, Tier, TIER_CERTIFICATION, TIER_LATENCY_TARGET
-
+from backend.utils.crypto import generate_keypair, sha256_hash
+from backend.healthcare_config import (
+    HealthcareValidatorConfig as ValidatorConfig,  
+    HealthcareValidatorTier as Tier,               
+    TIER_CERTIFICATION_HEALTHCARE as TIER_CERTIFICATION,
+    TIER_LATENCY_TARGET
+)
 class Validator:
     
     def __init__(self, validator_id: str, stake: float, tier: Tier):
