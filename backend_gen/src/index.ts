@@ -9,10 +9,15 @@ import { buildServer } from "./server/app";
 import http from "http";
 import dotenv from "dotenv";
 import { ReferenceDirectory } from "./services/reference/ReferenceDirectory";
+import { DatabaseClient } from "./services/database/DatabaseClient";
+import { TransactionRepository } from "./services/transactions/TransactionRepository";
 
 dotenv.config();
 
 async function bootstrap() {
+  const database = new DatabaseClient();
+  await database.connect();
+
   const chainState = new ChainState();
   await chainState.initialize();
 
@@ -23,7 +28,7 @@ async function bootstrap() {
     statsProvider: () => mempool.getQueueStats()
   });
 
-  const auditLog = new AuditLogService();
+  const auditLog = new AuditLogService(database);
   await auditLog.initialize();
 
   await auditLog.record({
@@ -43,8 +48,10 @@ async function bootstrap() {
   const walletAuth = new WalletAuthService(walletRegistry);
   await walletAuth.initialize();
 
-  const referenceDirectory = new ReferenceDirectory();
+  const referenceDirectory = new ReferenceDirectory(database);
   await referenceDirectory.initialize();
+
+  const transactionRepository = new TransactionRepository(database);
 
   if (DEMO_METAMASK_ADDRESS) {
     try {
@@ -80,7 +87,8 @@ async function bootstrap() {
     auditLog,
     walletRegistry,
     walletAuth,
-    referenceDirectory
+    referenceDirectory,
+    transactionRepository
   });
 
   const port = Number(process.env.PORT ?? 4000);

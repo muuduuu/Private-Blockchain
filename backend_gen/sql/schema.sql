@@ -1,4 +1,6 @@
 -- CAMTC Ledger PostgreSQL schema
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 CREATE TABLE IF NOT EXISTS providers (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -71,6 +73,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     prev_hash TEXT,
     integrity_hash TEXT NOT NULL,
     tags TEXT[] DEFAULT '{}',
+    channel TEXT DEFAULT 'system',
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -78,3 +81,5 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_patient ON audit_log(patient_id);
 CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_log(resource);
+
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'system';

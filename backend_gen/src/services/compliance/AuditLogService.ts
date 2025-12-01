@@ -1,67 +1,53 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { randomUUID } from "crypto";
-import {
-  AUDIT_DIR,
-  AUDIT_EXPORT_DIR,
-  AUDIT_LOG_FILE,
-  AUDIT_LOG_MAX_BYTES,
-  AUDIT_RETENTION_DAYS,
-  FILE_ENCODING
-} from "../../config/constants";
-import {
-  AuditLogEntry,
-  AuditLogFilters,
-  AuditLogQueryOptions,
-  AuditLogQueryResult,
-  AuditLogRecordInput
-} from "../../types";
+import { AuditLogEntry, AuditLogFilters, AuditLogQueryOptions, AuditLogQueryResult, AuditLogRecordInput } from "../../types";
+import { DatabaseClient } from "../database/DatabaseClient";
 import { sha256 } from "../../utils/crypto";
-
-const DAY_IN_MS = 86_400_000;
-
-type Direction = "asc" | "desc";
 
 export interface AuditLogServiceOptions {
   logger?: typeof console;
-  cacheSize?: number;
 }
 
-export class AuditLogService {
-  private logger: typeof console;
-  private cache: AuditLogEntry[] = [];
-  private cacheSize: number;
-  private nextSequence = 1;
-  private lastIntegrityHash = "AUDIT_ROOT";
+type Direction = "asc" | "desc";
 
-  constructor(options: AuditLogServiceOptions = {}) {
+type AuditLogRow = {
+  sequence: number;
+  entry_id: string;
+  actor_id: string;
+  actor_type: string;
+  action: string;
+  resource: string;
+  outcome: string;
+  patient_id: string | null;
+  ip_address: string | null;
+  block_hash: string | null;
+  prev_hash: string | null;
+  integrity_hash: string;
+  tags: string[] | null;
+  metadata: Record<string, unknown> | string | null;
+  created_at: Date;
+  channel: string | null;
+  details?: string | null;
+  total_count?: number;
+};
+
+export class AuditLogService {
+  private lastIntegrityHash = "AUDIT_ROOT";
+  private readonly logger: typeof console;
+
+  constructor(private readonly database: DatabaseClient, options: AuditLogServiceOptions = {}) {
     this.logger = options.logger ?? console;
-    this.cacheSize = options.cacheSize ?? 256;
   }
 
   async initialize(): Promise<void> {
-    await fs.mkdir(AUDIT_DIR, { recursive: true });
-    await fs.mkdir(AUDIT_EXPORT_DIR, { recursive: true });
-
-    const exists = await this.exists(AUDIT_LOG_FILE);
-    if (!exists) {
-      await fs.writeFile(AUDIT_LOG_FILE, "", FILE_ENCODING);
-      this.logger.info("[AuditLog] Created fresh ledger file");
-      return;
-    }
-
-    await this.bootstrapStateFromFile();
-    await this.enforceRetention();
-    await this.rotateIfNeeded();
+    await this.hydrateState();
   }
 
   async record(input: AuditLogRecordInput): Promise<AuditLogEntry> {
     this.validateInput(input);
 
     const timestamp = input.timestamp ?? new Date().toISOString();
-    const sequence = this.nextSequence++;
+    const channel = input.channel ?? "system";
     const basePayload = {
-      sequence,
       timestamp,
       action: input.action,
       actorId: input.actorId,
@@ -73,59 +59,144 @@ export class AuditLogService {
       blockHash: input.blockHash,
       details: input.details,
       metadata: input.metadata,
-      tags: input.tags ?? [],
-      channel: input.channel ?? "system"
-    } satisfies Omit<AuditLogEntry, "id" | "prevHash" | "integrityHash">;
+      tags: input.tags ?? []
+    } satisfies Omit<AuditLogEntry, "id" | "sequence" | "prevHash" | "integrityHash" | "channel">;
+
+    const entryId = input.id ?? `aud-${randomUUID()}`;
+    const prevHash = this.lastIntegrityHash;
+    const integrityHash = this.computeIntegrityHash(basePayload, prevHash);
+
+    const result = await this.database.query<{ sequence: number; created_at: Date }>(
+      `INSERT INTO audit_log (
+        entry_id,
+        actor_id,
+        actor_type,
+        action,
+        resource,
+        outcome,
+        patient_id,
+        ip_address,
+        block_hash,
+        prev_hash,
+        integrity_hash,
+        tags,
+        metadata,
+        created_at,
+        channel
+      ) VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13::jsonb,
+        $14,
+        $15
+      ) RETURNING sequence, created_at`,
+      [
+        entryId,
+        basePayload.actorId,
+        basePayload.actorType,
+        basePayload.action,
+        basePayload.resource,
+        basePayload.outcome,
+        basePayload.patientId ?? null,
+        basePayload.ipAddress ?? null,
+        basePayload.blockHash ?? null,
+        prevHash,
+        integrityHash,
+        basePayload.tags,
+        JSON.stringify(basePayload.metadata ?? {}),
+        timestamp,
+        channel
+      ]
+    );
+
+    const persisted = result.rows[0];
+
+    const persistedTimestamp = persisted.created_at?.toISOString?.() ?? timestamp;
 
     const entry: AuditLogEntry = {
-      id: input.id ?? `aud-${sequence}-${randomUUID()}`,
+      id: entryId,
+      sequence: persisted.sequence,
       ...basePayload,
-      prevHash: this.lastIntegrityHash,
-      integrityHash: this.computeIntegrityHash(basePayload)
+      timestamp: persistedTimestamp,
+      channel,
+      prevHash,
+      integrityHash
     };
 
-    await fs.appendFile(AUDIT_LOG_FILE, JSON.stringify(entry) + "\n", FILE_ENCODING);
-    this.lastIntegrityHash = entry.integrityHash;
-
-    this.cache.unshift(entry);
-    if (this.cache.length > this.cacheSize) {
-      this.cache = this.cache.slice(0, this.cacheSize);
-    }
-
-    await this.rotateIfNeeded();
-    if (AUDIT_RETENTION_DAYS > 0 && sequence % 50 === 0) {
-      await this.enforceRetention();
-    }
+    this.lastIntegrityHash = integrityHash;
+    this.logger.info(`[AuditLog] Recorded entry ${entry.id}`);
     return entry;
   }
 
   async query(options: AuditLogQueryOptions = {}): Promise<AuditLogQueryResult> {
-    const entries = await this.readAllEntries();
-    const filtered = this.applyFilters(entries, options.filters);
     const direction: Direction = options.direction ?? "desc";
-    const ordered = this.sortEntries(filtered, direction);
-    const limit = options.limit ?? 100;
-    const startIndex = this.resolveCursorIndex(ordered, options.cursor);
-    const window = ordered.slice(startIndex, startIndex + limit);
+    const limit = Math.min(options.limit ?? 100, 1000);
 
-    const nextCursor = window.length === limit ? String(window[window.length - 1].sequence) : undefined;
-    const previousCursor = startIndex > 0 && ordered[startIndex - 1] ? String(ordered[startIndex - 1].sequence) : undefined;
+    const clauseState = this.buildWhereClause(options.filters);
+    const params = clauseState.params;
+    let nextIndex = clauseState.nextIndex;
+    const cursorPredicate = this.buildCursorPredicate(options.cursor, direction, params, () => nextIndex++);
+    const clauses = [clauseState.predicate, cursorPredicate].filter(Boolean);
+    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
+    params.push(limit + 1);
+    const limitPlaceholder = `$${nextIndex}`;
+    const query = `
+      SELECT sequence,
+             entry_id,
+             actor_id,
+             actor_type,
+             action,
+             resource,
+             outcome,
+             patient_id,
+             ip_address,
+             block_hash,
+             prev_hash,
+             integrity_hash,
+             tags,
+             metadata,
+             created_at,
+             channel,
+             details,
+             COUNT(*) OVER () AS total_count
+        FROM audit_log
+        ${whereClause}
+        ORDER BY sequence ${direction === "desc" ? "DESC" : "ASC"}
+        LIMIT ${limitPlaceholder}
+    `;
+
+    const result = await this.database.query<AuditLogRow>(query, params);
+    const rows = result.rows;
+    const hasMore = rows.length > limit;
+    const window = rows.slice(0, limit);
+    const entries = window.map((row) => this.mapRow(row));
+    const totalMatches = rows[0]?.total_count ?? entries.length;
+
+    const nextCursor = hasMore && entries.length > 0 ? String(entries[entries.length - 1].sequence) : undefined;
+    const previousCursor = entries.length > 0 ? String(entries[0].sequence) : undefined;
 
     return {
-      entries: window,
-      totalMatches: filtered.length,
-      hasMore: Boolean(nextCursor),
+      entries,
+      totalMatches,
       nextCursor,
-      previousCursor
+      previousCursor,
+      hasMore
     };
   }
 
   async exportCsv(options: AuditLogQueryOptions = {}): Promise<string> {
     const { entries } = await this.query({ ...options, limit: options.limit ?? 1000 });
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `audit-export-${timestamp}.csv`;
-    const destination = path.join(AUDIT_EXPORT_DIR, filename);
-
     const header = [
       "sequence",
       "id",
@@ -159,115 +230,112 @@ export class AuditLogService {
         entry.channel ?? "",
         (entry.tags ?? []).join("|"),
         entry.details ?? ""
-      ].map((value) => this.escapeCsv(String(value))).join(",")
+      ]
+        .map((value) => this.escapeCsv(String(value)))
+        .join(",")
     );
 
-    const csvPayload = [header.join(","), ...rows].join("\n");
-    await fs.writeFile(destination, csvPayload, FILE_ENCODING);
-    this.logger.info(`[AuditLog] Exported ${entries.length} entries -> ${filename}`);
-    return destination;
+    return [header.join(","), ...rows].join("\n");
   }
 
-  private async bootstrapStateFromFile(): Promise<void> {
-    try {
-      const raw = await fs.readFile(AUDIT_LOG_FILE, FILE_ENCODING);
-      const lines = raw.split(/\r?\n/).filter(Boolean);
-      if (lines.length === 0) {
-        return;
+  private async hydrateState(): Promise<void> {
+    const result = await this.database.query<{ integrity_hash: string }>(
+      "SELECT integrity_hash FROM audit_log ORDER BY sequence DESC LIMIT 1"
+    );
+    if (result.rows[0]?.integrity_hash) {
+      this.lastIntegrityHash = result.rows[0].integrity_hash;
+    }
+  }
+
+  private buildWhereClause(filters?: AuditLogFilters) {
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    let idx = 1;
+
+    const push = (predicate: string, value: unknown) => {
+      clauses.push(predicate.replace("$idx", `$${idx}`));
+      params.push(value);
+      idx += 1;
+    };
+
+    if (filters) {
+      if (filters.actorId) push("actor_id = $idx", filters.actorId);
+      if (filters.actorType) push("actor_type = $idx", filters.actorType);
+      if (filters.patientId) push("patient_id = $idx", filters.patientId);
+      if (filters.resource) push("resource = $idx", filters.resource);
+      if (filters.action) push("action = $idx", filters.action);
+      if (filters.outcome) push("outcome = $idx", filters.outcome);
+      if (filters.from) push("created_at >= $idx", filters.from);
+      if (filters.to) push("created_at <= $idx", filters.to);
+      if (filters.search) {
+        push("(resource ILIKE $idx OR actor_id ILIKE $idx OR details ILIKE $idx OR metadata::text ILIKE $idx)", `%${filters.search}%`);
       }
-
-      const entries = lines.map((line) => JSON.parse(line) as AuditLogEntry);
-      entries.sort((a, b) => a.sequence - b.sequence);
-      const last = entries[entries.length - 1];
-      this.nextSequence = last.sequence + 1;
-      this.lastIntegrityHash = last.integrityHash;
-      this.cache = entries.slice(-this.cacheSize).reverse();
-    } catch (error) {
-      this.logger.error("[AuditLog] Failed to hydrate state, resetting ledger", error);
-      await fs.writeFile(AUDIT_LOG_FILE, "", FILE_ENCODING);
-      this.cache = [];
-      this.nextSequence = 1;
-      this.lastIntegrityHash = "AUDIT_ROOT";
-    }
-  }
-
-  private async readAllEntries(): Promise<AuditLogEntry[]> {
-    try {
-      const raw = await fs.readFile(AUDIT_LOG_FILE, FILE_ENCODING);
-      const lines = raw.split(/\r?\n/).filter(Boolean);
-      return lines
-        .map((line) => JSON.parse(line) as AuditLogEntry)
-        .sort((a, b) => b.sequence - a.sequence);
-    } catch (error) {
-      this.logger.error("[AuditLog] Unable to read log file", error);
-      return [];
-    }
-  }
-
-  private applyFilters(entries: AuditLogEntry[], filters?: AuditLogFilters): AuditLogEntry[] {
-    if (!filters) {
-      return entries;
-    }
-
-    const fromTime = filters.from ? Date.parse(filters.from) : undefined;
-    const toTime = filters.to ? Date.parse(filters.to) : undefined;
-    const searchNeedle = filters.search?.toLowerCase();
-
-    return entries.filter((entry) => {
-      if (filters.actorId && entry.actorId !== filters.actorId) return false;
-      if (filters.actorType && entry.actorType !== filters.actorType) return false;
-      if (filters.patientId && entry.patientId !== filters.patientId) return false;
-      if (filters.resource && entry.resource !== filters.resource) return false;
-      if (filters.action && entry.action !== filters.action) return false;
-      if (filters.outcome && entry.outcome !== filters.outcome) return false;
-
-      if (fromTime && Date.parse(entry.timestamp) < fromTime) return false;
-      if (toTime && Date.parse(entry.timestamp) > toTime) return false;
-
       if (filters.tags && filters.tags.length > 0) {
-        const entryTags = entry.tags ?? [];
-        const missingTag = filters.tags.some((tag) => !entryTags.includes(tag));
-        if (missingTag) return false;
+        push("tags @> $idx", filters.tags);
       }
-
-      if (searchNeedle) {
-        const haystack = [
-          entry.details,
-          entry.metadata ? JSON.stringify(entry.metadata) : "",
-          entry.actorId,
-          entry.resource,
-          entry.blockHash,
-          entry.patientId
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(searchNeedle)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }
-
-  private sortEntries(entries: AuditLogEntry[], direction: Direction): AuditLogEntry[] {
-    const sorted = [...entries].sort((a, b) => b.sequence - a.sequence);
-    return direction === "asc" ? sorted.reverse() : sorted;
-  }
-
-  private resolveCursorIndex(entries: AuditLogEntry[], cursor?: string): number {
-    if (!cursor) {
-      return 0;
     }
 
+    return {
+      predicate: clauses.length > 0 ? clauses.join(" AND ") : "",
+      params,
+      nextIndex: idx
+    };
+  }
+
+  private buildCursorPredicate(
+    cursor: string | undefined,
+    direction: Direction,
+    params: unknown[],
+    allocateIndex: () => number
+  ): string {
+    if (!cursor) {
+      return "";
+    }
     const sequence = Number(cursor);
     if (!Number.isFinite(sequence)) {
-      return 0;
+      return "";
     }
+    const comparator = direction === "desc" ? "<" : ">";
+    const placeholderIndex = allocateIndex();
+    params.push(sequence);
+    return `sequence ${comparator} $${placeholderIndex}`;
+  }
 
-    const index = entries.findIndex((entry) => entry.sequence === sequence);
-    return index >= 0 ? index + 1 : 0;
+  private mapRow(row: AuditLogRow): AuditLogEntry {
+    return {
+      id: row.entry_id,
+      sequence: row.sequence,
+      timestamp: row.created_at?.toISOString?.() ?? new Date().toISOString(),
+      action: row.action,
+      actorId: row.actor_id,
+      actorType: row.actor_type,
+      resource: row.resource,
+      outcome: row.outcome,
+      patientId: row.patient_id ?? undefined,
+      ipAddress: row.ip_address ?? undefined,
+      blockHash: row.block_hash ?? undefined,
+      details: row.details ?? undefined,
+      metadata: this.parseJson(row.metadata),
+      tags: row.tags ?? [],
+      channel: row.channel ?? undefined,
+      prevHash: row.prev_hash ?? "AUDIT_ROOT",
+      integrityHash: row.integrity_hash
+    };
+  }
+
+  private parseJson(payload: Record<string, unknown> | string | null): Record<string, unknown> | undefined {
+    if (!payload) {
+      return undefined;
+    }
+    if (typeof payload === "string") {
+      try {
+        return JSON.parse(payload) as Record<string, unknown>;
+      } catch (error) {
+        this.logger.warn("[AuditLog] Failed to parse metadata JSON", error);
+        return undefined;
+      }
+    }
+    return payload;
   }
 
   private escapeCsv(value: string): string {
@@ -277,49 +345,16 @@ export class AuditLogService {
     return value;
   }
 
-  private async enforceRetention(): Promise<void> {
-    if (AUDIT_RETENTION_DAYS <= 0) {
-      return;
-    }
-
-    const cutoff = Date.now() - AUDIT_RETENTION_DAYS * DAY_IN_MS;
-    const entries = await this.readAllEntries();
-    if (entries.length === 0) {
-      return;
-    }
-
-    const retained = entries.filter((entry) => Date.parse(entry.timestamp) >= cutoff);
-    if (retained.length === entries.length) {
-      return;
-    }
-
-    retained.sort((a, b) => a.sequence - b.sequence);
-    const lines = retained.map((entry) => JSON.stringify(entry));
-    await fs.writeFile(AUDIT_LOG_FILE, lines.join("\n") + "\n", FILE_ENCODING);
-    this.logger.warn(`[AuditLog] Pruned ${entries.length - retained.length} entries outside retention window`);
-    await this.bootstrapStateFromFile();
-  }
-
-  private async rotateIfNeeded(): Promise<void> {
-    if (AUDIT_LOG_MAX_BYTES <= 0) {
-      return;
-    }
-
-    try {
-      const stats = await fs.stat(AUDIT_LOG_FILE);
-      if (stats.size < AUDIT_LOG_MAX_BYTES) {
-        return;
-      }
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const rotated = path.join(AUDIT_DIR, `audit-log-${timestamp}.jsonl`);
-      await fs.rename(AUDIT_LOG_FILE, rotated);
-      await fs.writeFile(AUDIT_LOG_FILE, "", FILE_ENCODING);
-      this.logger.warn(`[AuditLog] Rotated ledger -> ${path.basename(rotated)}`);
-      await this.bootstrapStateFromFile();
-    } catch (error) {
-      this.logger.error("[AuditLog] Failed to rotate ledger", error);
-    }
+  private computeIntegrityHash(
+    payload: Omit<AuditLogEntry, "id" | "sequence" | "prevHash" | "integrityHash" | "channel">,
+    prevHash: string
+  ): string {
+    return sha256(
+      JSON.stringify({
+        prevHash,
+        ...payload
+      })
+    );
   }
 
   private validateInput(input: AuditLogRecordInput): void {
@@ -337,24 +372,6 @@ export class AuditLogService {
     }
     if (!input.outcome) {
       throw new Error("AuditLogService.record missing required field: outcome");
-    }
-  }
-
-  private computeIntegrityHash(payload: Omit<AuditLogEntry, "id" | "prevHash" | "integrityHash">): string {
-    return sha256(
-      JSON.stringify({
-        prevHash: this.lastIntegrityHash,
-        ...payload
-      })
-    );
-  }
-
-  private async exists(filePath: string): Promise<boolean> {
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
     }
   }
 }

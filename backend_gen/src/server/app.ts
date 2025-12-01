@@ -10,6 +10,8 @@ import { WalletAuthService } from "../services/wallet/WalletAuthService";
 import { ReferenceDirectory } from "../services/reference/ReferenceDirectory";
 import { API_PREFIX } from "../config/constants";
 import { MempoolEntry, MempoolSnapshot, TransactionRecord } from "../types";
+import { PRIORITY_LABELS, toTierNumber } from "../utils/priority";
+import { TransactionRepository, TransactionFilterSet } from "../services/transactions/TransactionRepository";
 
 class HttpError extends Error {
   constructor(public statusCode: number, message: string, public details?: unknown) {
@@ -35,12 +37,6 @@ interface DashboardMetricsPayload {
   validatorScores: { name: string; value: number }[];
 }
 
-const PRIORITY_LABELS: Record<1 | 2 | 3, string> = {
-  1: "Tier-1",
-  2: "Tier-2",
-  3: "Tier-3"
-};
-
 export interface ServerDependencies {
   chainState: ChainState;
   mempool: Mempool;
@@ -49,6 +45,7 @@ export interface ServerDependencies {
   walletRegistry: WalletRegistry;
   walletAuth: WalletAuthService;
   referenceDirectory: ReferenceDirectory;
+  transactionRepository: TransactionRepository;
 }
 
 export const buildServer = (deps: ServerDependencies) => {
@@ -97,15 +94,19 @@ export const buildServer = (deps: ServerDependencies) => {
     res.json({ data: deps.referenceDirectory.getValidators() });
   });
 
-  api.get("/transactions", (req, res) => {
-    const filters = {
-      patientId: getQueryString(req.query.patientId),
-      type: getQueryString(req.query.type),
-      priority: getQueryString(req.query.priority),
-      status: getQueryString(req.query.status)
-    };
-    const limit = parseLimit(req.query.limit, 100);
-    respondWithTransactions(deps, res, filters, limit);
+  api.get("/transactions", async (req, res, next) => {
+    try {
+      const filters = {
+        patientId: getQueryString(req.query.patientId),
+        type: getQueryString(req.query.type),
+        priority: getQueryString(req.query.priority),
+        status: getQueryString(req.query.status)
+      } satisfies TransactionFilters;
+      const limit = parseLimit(req.query.limit, 100);
+      await respondWithTransactions(deps, res, filters, limit);
+    } catch (error) {
+      next(error);
+    }
   });
 
   api.post("/transactions", async (req, res, next) => {
@@ -160,6 +161,26 @@ export const buildServer = (deps: ServerDependencies) => {
         breakdown,
         addedAt: new Date().toISOString()
       });
+
+      const providerId = typeof payload.providerId === "string" ? payload.providerId : undefined;
+
+      try {
+        await deps.transactionRepository.insertTransaction({
+          id: baseRecord.id,
+          patientId: payload.patientId,
+          providerId,
+          type: payload.type,
+          tier,
+          priorityScore: breakdown.priority,
+          payload: baseRecord.payload,
+          status: payload.status ?? "Pending",
+          signature: baseRecord.signature,
+          blockHash: typeof baseRecord.payload.blockHash === "string" ? baseRecord.payload.blockHash : null
+        });
+      } catch (dbError) {
+        deps.mempool.removeTransaction(baseRecord.id);
+        throw dbError;
+      }
 
       res.status(201).json({
         data: {
@@ -260,17 +281,19 @@ export const buildServer = (deps: ServerDependencies) => {
   return app;
 };
 
-const respondWithTransactions = (
+const respondWithTransactions = async (
   deps: ServerDependencies,
   res: Response,
   filters: TransactionFilters,
   limit: number
-) => {
+): Promise<void> => {
   const snapshot: MempoolSnapshot = deps.mempool.getSnapshot();
   const stats = deps.mempool.getQueueStats();
   const allEntries = [...snapshot.tier1, ...snapshot.tier2, ...snapshot.tier3];
   const mapped = allEntries.map(mapEntryToUi);
-  const filtered = mapped.filter((tx) => matchesTransactionFilters(tx, filters)).slice(0, limit);
+  const persisted = await deps.transactionRepository.listTransactions(buildTransactionFilterSet(filters), limit);
+  const combined = [...mapped, ...persisted];
+  const filtered = combined.filter((tx) => matchesTransactionFilters(tx, filters)).slice(0, limit);
 
   res.json({
     data: {
@@ -280,6 +303,13 @@ const respondWithTransactions = (
     }
   });
 };
+
+const buildTransactionFilterSet = (filters: TransactionFilters): TransactionFilterSet => ({
+  patientId: filters.patientId,
+  type: filters.type,
+  priority: filters.priority,
+  status: filters.status
+});
 
 const parseLimit = (value: unknown, fallback: number): number => {
   if (typeof value !== "string") {
@@ -373,33 +403,6 @@ const mapEntryToUi = (entry: MempoolEntry) => {
     timestamp: entry.tx.createdAt,
     payload
   };
-};
-
-const toTierNumber = (value: unknown): 1 | 2 | 3 => {
-  if (value === 1 || value === 2 || value === 3) {
-    return value;
-  }
-
-  if (typeof value === "number") {
-    if (value <= 1) return 1;
-    if (value === 2) return 2;
-    return 3;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.toLowerCase();
-    if (normalized.includes("tier-1") || normalized.includes("critical")) {
-      return 1;
-    }
-    if (normalized.includes("tier-2") || normalized.includes("priority")) {
-      return 2;
-    }
-    if (normalized.includes("tier-3")) {
-      return 3;
-    }
-  }
-
-  return 3;
 };
 
 const buildMetricsPayload = (

@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
-    "dev:server": "nodemon --watch src --exec ts-node src/server/index.ts"
+    "dev:server": "nodemon --watch src --exec ts-node src/server/index.ts",
+    "db:setup": "ts-node src/scripts/setupDatabase.ts"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -25,6 +26,10 @@
     "uuid": "^9.0.0",
     "sqlite3": "^5.1.6",
     "sqlite": "^5.0.1",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10"
   }
 }
