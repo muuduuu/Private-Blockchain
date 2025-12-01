@@ -68,20 +68,20 @@ export function PatientRecordsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-400">Search &amp; View All</p>
-          <h2 className="text-2xl font-semibold text-white">📋 Patient Records - EMR Search</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Search &amp; View All</p>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">📋 Patient Records - EMR Search</h2>
         </div>
         <Button variant="outline" onClick={() => setFiltersOpen((prev) => !prev)}>
           <Filter className="mr-2 h-4 w-4" /> {filtersOpen ? "Hide Filters" : "Show Filters"}
         </Button>
       </header>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-card">
+      <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-card transition-colors dark:border-white/10 dark:bg-white/5">
         <div className="flex flex-col gap-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-14 rounded-full border-white/20 bg-slate-900/60 pl-12 text-lg"
+              className="h-14 rounded-full border-slate-300 bg-white pl-12 text-lg text-slate-900 dark:border-white/20 dark:bg-slate-900/60 dark:text-white"
               placeholder="Search by Patient ID"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
@@ -89,16 +89,20 @@ export function PatientRecordsPage() {
           </div>
 
           {filtersOpen && (
-            <div className="grid gap-6 rounded-2xl border border-white/10 bg-slate-900/50 p-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-6 rounded-2xl border border-slate-200/70 bg-slate-50 p-6 transition-colors dark:border-white/10 dark:bg-slate-900/50 md:grid-cols-2 xl:grid-cols-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Record Type</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Record Type</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {transactionTypes.map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => toggleType(type)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${recordTypes.has(type) ? "bg-primary text-white" : "bg-white/5 text-slate-300"}`}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                        recordTypes.has(type)
+                          ? "bg-primary text-white"
+                          : "bg-slate-200 text-slate-700 dark:bg-white/5 dark:text-slate-300"
+                      }`}
                     >
                       {type}
                     </button>
@@ -107,7 +111,7 @@ export function PatientRecordsPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Date Range</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Date Range</p>
                 <div className="mt-3 grid gap-3">
                   <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
                   <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
@@ -115,12 +119,12 @@ export function PatientRecordsPage() {
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Provider Name</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Provider Name</p>
                 <Input className="mt-3" value={providerFilter} onChange={(event) => setProviderFilter(event.target.value)} />
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Priority Tier</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Priority Tier</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-sm">
                   {["All", "Tier-1", "Tier-2", "Tier-3"].map((tier) => (
                     <label key={tier} className="flex items-center gap-2">
@@ -140,9 +144,9 @@ export function PatientRecordsPage() {
           <CardTitle>Results ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm text-slate-200">
+          <table className="w-full text-sm text-slate-700 dark:text-slate-100">
             <thead>
-              <tr className="bg-white/5 text-xs uppercase tracking-[0.3em] text-slate-400">
+              <tr className="bg-slate-100/80 text-xs uppercase tracking-[0.3em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
                 <th className="px-3 py-3 text-left">Timestamp</th>
                 <th className="px-3 py-3 text-left">Type</th>
                 <th className="px-3 py-3 text-left">Provider</th>
@@ -154,7 +158,11 @@ export function PatientRecordsPage() {
             </thead>
             <tbody>
               {paginated.map((tx) => (
-                <tr key={tx.id} className="cursor-pointer border-b border-white/5 hover:bg-white/5" onClick={() => openModal(tx)}>
+                <tr
+                  key={tx.id}
+                  className="cursor-pointer border-b border-slate-200/70 hover:bg-slate-100 dark:border-white/5 dark:hover:bg-white/5"
+                  onClick={() => openModal(tx)}
+                >
                   <td className="px-3 py-3">{new Date(tx.timestamp).toLocaleString()}</td>
                   <td className="px-3 py-3">{tx.type}</td>
                   <td className="px-3 py-3">{tx.provider}</td>
@@ -172,7 +180,7 @@ export function PatientRecordsPage() {
             </tbody>
           </table>
 
-          <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+          <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>
               Page {page} / {totalPages}
             </span>
@@ -199,12 +207,12 @@ function Modal({ transaction, related, onClose, onCopy }: { transaction: Transac
   const confirmations = Math.floor(Math.random() * 12) + 1
   const signatureValid = Math.random() > 0.1
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-6">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-900 p-6 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-6 backdrop-blur">
+      <div className="w-full max-w-3xl rounded-2xl border border-slate-200/70 bg-white p-6 text-slate-900 transition-colors dark:border-white/10 dark:bg-slate-900 dark:text-white">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xl font-semibold">Transaction {transaction.id}</h3>
-            <p className="text-sm text-slate-400">Block {transaction.blockHash}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Block {transaction.blockHash}</p>
           </div>
           <button onClick={onClose}>Close</button>
         </div>
@@ -223,24 +231,24 @@ function Modal({ transaction, related, onClose, onCopy }: { transaction: Transac
               <Copy className="mr-2 h-4 w-4" /> Copy
             </Button>
           </div>
-          <pre className="mt-3 max-h-60 overflow-auto rounded-lg bg-slate-950/60 p-4 text-xs text-slate-300">
+          <pre className="mt-3 max-h-60 overflow-auto rounded-lg bg-slate-100 p-4 text-xs text-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
             {JSON.stringify(transaction.payload, null, 2)}
           </pre>
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-white/10 p-3 text-sm">
+          <div className="rounded-lg border border-slate-200/70 p-3 text-sm dark:border-white/10">
             Signature Verification
             <div className="mt-2 flex items-center gap-2 text-base">
               {signatureValid ? <CheckCircle2 className="text-success" /> : <XCircle className="text-danger" />}
               {signatureValid ? "✅ Valid" : "❌ Invalid"}
             </div>
           </div>
-          <div className="rounded-lg border border-white/10 p-3 text-sm">
+          <div className="rounded-lg border border-slate-200/70 p-3 text-sm dark:border-white/10">
             Block Confirmations
             <p className="text-2xl font-semibold text-primary">Confirmed in {confirmations} blocks</p>
           </div>
-          <div className="rounded-lg border border-white/10 p-3 text-sm">
+          <div className="rounded-lg border border-slate-200/70 p-3 text-sm dark:border-white/10">
             Related Transactions
             <p className="text-xl font-semibold">{related.length}</p>
           </div>
@@ -252,9 +260,9 @@ function Modal({ transaction, related, onClose, onCopy }: { transaction: Transac
 
 function InfoTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 p-3">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
-      <p className="text-lg font-semibold">{value}</p>
+    <div className="rounded-lg border border-slate-200/70 p-3 dark:border-white/10">
+      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-lg font-semibold text-slate-900 dark:text-white">{value}</p>
     </div>
   )
 }

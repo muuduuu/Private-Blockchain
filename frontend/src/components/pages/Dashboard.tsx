@@ -117,11 +117,11 @@ interface MetricCardProps {
   color?: string
 }
 
-function MetricCard({ label, value, suffix = "", pill, color = "text-white" }: MetricCardProps) {
+function MetricCard({ label, value, suffix = "", pill, color = "text-slate-900 dark:text-white" }: MetricCardProps) {
   return (
-    <Card className="border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40">
+    <Card className="bg-white/95 dark:bg-gradient-to-br dark:from-slate-900/80 dark:to-slate-800/40">
       <CardHeader>
-        <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{label}</p>
       </CardHeader>
       <CardContent className="flex items-end justify-between">
         <p className={cn("text-3xl font-bold", color)}>

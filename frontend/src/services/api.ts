@@ -68,8 +68,8 @@ export const ApiService = {
 	},
 
 	async fetchPatients(): Promise<string[]> {
-		const patients = await unwrap(http.get("/reference/patients"))
-		return patients.map((patient: { id: string }) => patient.id)
+		const patients = await unwrap<{ id: string }[]>(http.get("/reference/patients"))
+		return patients.map((patient) => patient.id)
 	},
 
 	async fetchTransactions(filters: TransactionFilters = {}): Promise<TransactionRecord[]> {

@@ -102,7 +102,7 @@ export function PharmacyPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-white">💊 Pharmacy - Issue Prescription</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">💊 Pharmacy - Issue Prescription</h2>
         <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-2 text-warning">
           Priority: {priority} {priorityLabel}
         </div>

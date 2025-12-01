@@ -54,7 +54,7 @@ export function SystemStatusPage() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-white">⚙ System Status - Network Health</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">⚙ System Status - Network Health</h2>
         <Badge label={consensusActive ? "Consensus Active" : "Stalled"} variant={consensusActive ? "success" : "danger"} />
       </header>
 
@@ -70,9 +70,9 @@ export function SystemStatusPage() {
           <CardTitle>Validator Fleet</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm text-slate-200">
+          <table className="w-full text-sm text-slate-700 dark:text-slate-100">
             <thead>
-              <tr className="bg-white/5 text-xs uppercase tracking-[0.3em] text-slate-400">
+              <tr className="bg-slate-100/80 text-xs uppercase tracking-[0.3em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
                 <th className="px-3 py-3 text-left">ID</th>
                 <th className="px-3 py-3 text-left">Tier</th>
                 <th className="px-3 py-3 text-left">Reputation</th>
@@ -85,7 +85,10 @@ export function SystemStatusPage() {
               {validators.map((node) => (
                 <tr
                   key={node.id}
-                  className={cn("cursor-pointer border-b border-white/5 hover:bg-white/5", rowColor(node.reputation))}
+                  className={cn(
+                    "cursor-pointer border-b border-slate-200/70 hover:bg-slate-100 dark:border-white/5 dark:hover:bg-white/5",
+                    rowColor(node.reputation),
+                  )}
                   onClick={() => setSelectedValidator(node)}
                 >
                   <td className="px-3 py-3">{node.id}</td>
@@ -156,11 +159,14 @@ export function SystemStatusPage() {
         <CardHeader>
           <CardTitle>System Logs</CardTitle>
         </CardHeader>
-        <CardContent className="max-h-72 overflow-y-auto space-y-3">
+        <CardContent className="max-h-72 space-y-3 overflow-y-auto">
           {systemLogs.map((log, index) => (
-            <div key={`${log.timestamp}-${index}`} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-xs">
-              <span className="text-slate-400">{new Date(log.timestamp).toLocaleTimeString()} • {log.level.toUpperCase()}</span>
-              <p className="text-white">{log.message}</p>
+            <div
+              key={`${log.timestamp}-${index}`}
+              className="rounded-lg border border-slate-200/70 bg-slate-50 px-3 py-2 text-xs dark:border-white/5 dark:bg-white/5"
+            >
+              <span className="text-slate-500 dark:text-slate-400">{new Date(log.timestamp).toLocaleTimeString()} • {log.level.toUpperCase()}</span>
+              <p className="text-slate-900 dark:text-white">{log.message}</p>
             </div>
           ))}
         </CardContent>
@@ -176,8 +182,8 @@ function MetricBlock({ label, value, icon }: { label: string; value: string | nu
     <Card>
       <CardContent className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
-          <p className="text-3xl font-semibold text-white">{value}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="text-3xl font-semibold text-slate-900 dark:text-white">{value}</p>
         </div>
         {icon}
       </CardContent>
@@ -193,11 +199,11 @@ function rowColor(reputation: number) {
 
 function ValidatorModal({ validator, onClose }: { validator: ValidatorNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-6">
-      <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-slate-900 p-6 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-6 backdrop-blur">
+      <div className="w-full max-w-xl rounded-2xl border border-slate-200/70 bg-white p-6 text-slate-900 transition-colors dark:border-white/10 dark:bg-slate-900 dark:text-white">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Validator Detail</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Validator Detail</p>
             <h3 className="text-2xl font-semibold">{validator.id}</h3>
           </div>
           <Button variant="outline" onClick={onClose}>
@@ -218,9 +224,9 @@ function ValidatorModal({ validator, onClose }: { validator: ValidatorNode; onCl
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-white/10 p-3">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
+    <div className="rounded-lg border border-slate-200/70 p-3 dark:border-white/10">
+      <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-xl font-semibold text-slate-900 dark:text-white">{value}</p>
     </div>
   )
 }

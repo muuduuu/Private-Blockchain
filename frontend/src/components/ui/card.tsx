@@ -2,7 +2,14 @@ import * as React from "react"
 import { cn } from "../../lib/utils"
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("rounded-lg border border-white/5 bg-slate-900/60 p-4 shadow-card", className)} {...props} />
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border border-slate-200/70 bg-white/90 p-4 shadow-card transition-colors dark:border-white/10 dark:bg-slate-900/60",
+      className,
+    )}
+    {...props}
+  />
 ))
 Card.displayName = "Card"
 
@@ -11,15 +18,15 @@ const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement
 )
 
 const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h3 className={cn("text-base font-semibold text-white", className)} {...props} />
+  <h3 className={cn("text-base font-semibold text-slate-900 dark:text-white", className)} {...props} />
 )
 
 const CardDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn("text-sm text-slate-400", className)} {...props} />
+  <p className={cn("text-sm text-slate-500 dark:text-slate-400", className)} {...props} />
 )
 
 const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("text-slate-100", className)} {...props} />
+  <div className={cn("text-slate-700 dark:text-slate-100", className)} {...props} />
 )
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent }

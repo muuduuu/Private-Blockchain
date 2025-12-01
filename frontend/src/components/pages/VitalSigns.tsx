@@ -82,8 +82,8 @@ export function VitalSignsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-400">Real-time monitoring</p>
-          <h2 className="text-2xl font-semibold text-white">💓 Vital Signs Monitor</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Real-time monitoring</p>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">💓 Vital Signs Monitor</h2>
         </div>
         <Badge
           label={status === "connected" ? "WebSocket Live" : status === "mock" ? "Simulated" : "Disconnected"}
@@ -170,12 +170,12 @@ interface VitalCardProps {
   color?: string
 }
 
-function VitalCard({ label, value, icon: Icon, alert = false, color = "text-white" }: VitalCardProps) {
+function VitalCard({ label, value, icon: Icon, alert = false, color = "text-slate-900 dark:text-white" }: VitalCardProps) {
   return (
     <Card className={alert ? "border-danger/40" : undefined}>
       <CardContent className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-400">{label}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">{label}</p>
           <p className={`text-3xl font-semibold ${color}`}>{value}</p>
         </div>
         <Icon className={`h-10 w-10 ${color}`} />

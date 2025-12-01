@@ -94,8 +94,8 @@ export function EmergencyPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-400">Tier-1 Critical Records</p>
-          <h2 className="text-2xl font-semibold text-white">🚨 Emergency Room - Create Critical Record</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Tier-1 Critical Records</p>
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">🚨 Emergency Room - Create Critical Record</h2>
         </div>
         <div className="rounded-lg border border-danger/20 bg-danger/10 px-4 py-2 text-danger">
           <p className="text-xs uppercase tracking-[0.3em] text-danger">Priority Score</p>

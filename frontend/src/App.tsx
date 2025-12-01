@@ -17,11 +17,11 @@ function AppShell() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <div className="flex min-h-screen bg-slate-950">
+        <div className="flex min-h-screen bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
           <Sidebar />
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col bg-slate-50 transition-colors dark:bg-slate-950">
             <Navbar />
-            <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+            <main className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-slate-100 p-6 transition-colors dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
               <Routes>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/emergency" element={<EmergencyPage />} />
@@ -63,9 +63,9 @@ class AppErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-white">
           <h1 className="text-3xl font-semibold">Something went wrong</h1>
-          <p className="mt-4 text-slate-400">Refresh the page to continue.</p>
+          <p className="mt-4 text-slate-500 dark:text-slate-400">Refresh the page to continue.</p>
         </div>
       )
     }

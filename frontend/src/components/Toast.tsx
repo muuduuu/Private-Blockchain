@@ -20,10 +20,10 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | undefined>(undefined)
 
 const variantClasses: Record<ToastVariant, string> = {
-  success: "border-success bg-success/10",
-  error: "border-danger bg-danger/10",
-  warning: "border-warning bg-warning/10",
-  info: "border-primary bg-primary/10",
+  success: "border-success/60 bg-success/10",
+  error: "border-danger/60 bg-danger/10",
+  warning: "border-warning/60 bg-warning/10",
+  info: "border-primary/60 bg-primary/10",
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -61,18 +61,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             className={cn(
-              "pointer-events-auto rounded-lg border px-4 py-3 shadow-lg shadow-slate-950/30",
+              "pointer-events-auto rounded-lg border px-4 py-3 text-slate-900 shadow-lg shadow-slate-900/20 transition-colors dark:text-white",
               variantClasses[toast.variant],
             )}
           >
             <div className="flex items-start gap-3">
               <div>
-                <p className="text-sm font-semibold text-white">{toast.title}</p>
-                {toast.description && <p className="text-xs text-slate-200">{toast.description}</p>}
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">{toast.title}</p>
+                {toast.description && <p className="text-xs text-slate-600 dark:text-slate-200">{toast.description}</p>}
               </div>
               <button
                 onClick={() => dismiss(toast.id)}
-                className="text-slate-100 transition hover:text-white"
+                className="text-slate-500 transition hover:text-slate-900 dark:text-slate-200 dark:hover:text-white"
                 aria-label="Dismiss toast"
               >
                 <X className="h-4 w-4" />

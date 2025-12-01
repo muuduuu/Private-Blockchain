@@ -75,7 +75,7 @@ export function AuditLogPage() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-white">🔐 Audit Log - Compliance Dashboard</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">🔐 Audit Log - Compliance Dashboard</h2>
         <div className="flex items-center gap-3">
           <Badge
             label={status === "connected" ? "New entries" : status === "mock" ? "Simulated" : "Offline"}
@@ -108,7 +108,11 @@ export function AuditLogPage() {
                   key={action}
                   type="button"
                   onClick={() => toggleAction(action)}
-                  className={`rounded-full px-3 py-1 text-xs ${selectedActions.has(action) ? "bg-primary text-white" : "bg-white/5 text-slate-300"}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    selectedActions.has(action)
+                      ? "bg-primary text-white"
+                      : "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-300"
+                  }`}
                 >
                   {action}
                 </button>
@@ -142,9 +146,9 @@ export function AuditLogPage() {
           <CardTitle>Results ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm text-slate-100">
+          <table className="w-full text-sm text-slate-700 dark:text-slate-100">
             <thead>
-              <tr className="bg-white/5 text-xs uppercase tracking-[0.3em] text-slate-400">
+              <tr className="bg-slate-100/80 text-xs uppercase tracking-[0.3em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
                 <th className="px-3 py-3 text-left">Timestamp</th>
                 <th className="px-3 py-3 text-left">Action</th>
                 <th className="px-3 py-3 text-left">User ID</th>
@@ -158,7 +162,7 @@ export function AuditLogPage() {
               {filtered.map((entry) => (
                 <Fragment key={entry.id}>
                   <tr
-                    className="cursor-pointer border-b border-white/5 hover:bg-white/5"
+                    className="cursor-pointer border-b border-slate-200/70 hover:bg-slate-100 dark:border-white/5 dark:hover:bg-white/5"
                     onClick={() => setExpandedRow((current) => (current === entry.id ? null : entry.id))}
                   >
                     <td className="px-3 py-3">{new Date(entry.timestamp).toLocaleString()}</td>
@@ -176,7 +180,7 @@ export function AuditLogPage() {
                   </tr>
                   {expandedRow === entry.id && (
                     <tr>
-                      <td colSpan={7} className="bg-slate-900/80 px-6 py-4 text-xs text-slate-300">
+                      <td colSpan={7} className="bg-slate-100 px-6 py-4 text-xs text-slate-600 dark:bg-slate-900/80 dark:text-slate-300">
                         <div className="flex items-center justify-between">
                           <p>{entry.details}</p>
                           <ChevronDown className="h-4 w-4" />

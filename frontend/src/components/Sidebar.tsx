@@ -41,14 +41,14 @@ export function Sidebar({ onToggle }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r border-white/5 bg-slate-900/80 px-2 py-6 text-white backdrop-blur-lg",
+        "flex h-screen flex-col border-r border-slate-200/60 bg-white/90 px-2 py-6 text-slate-900 backdrop-blur-lg transition-colors dark:border-white/5 dark:bg-slate-900/80 dark:text-white",
         collapsed ? "w-20" : "w-64",
       )}
     >
       <button
         type="button"
         onClick={handleToggle}
-        className="mx-auto mb-6 rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-400"
+        className="mx-auto mb-6 rounded-full border border-slate-200/70 px-3 py-1 text-xs uppercase tracking-[0.3em] text-slate-500 transition-colors dark:border-white/10 dark:text-slate-400"
       >
         {collapsed ? "Expand" : "Collapse"}
       </button>
@@ -65,8 +65,8 @@ export function Sidebar({ onToggle }: SidebarProps) {
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
                   collapsed ? "justify-center" : "justify-start",
                   isActive
-                    ? "bg-primary/20 text-white shadow-inner shadow-primary/40"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white",
+                    ? "bg-primary/15 text-primary dark:bg-primary/20 dark:text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white",
                 )
               }
             >

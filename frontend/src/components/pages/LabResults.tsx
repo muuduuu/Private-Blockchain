@@ -133,7 +133,7 @@ export function LabResultsPage() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-2xl font-semibold text-white">🧪 Lab Results - Upload &amp; Record</h2>
+        <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">🧪 Lab Results - Upload &amp; Record</h2>
         <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm text-primary">
           Priority Tier: {priority}
         </div>
@@ -141,13 +141,17 @@ export function LabResultsPage() {
 
       <div className="flex gap-4">
         <button
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === "upload" ? "bg-primary text-white" : "bg-white/5 text-slate-300"}`}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            tab === "upload" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-300"
+          }`}
           onClick={() => setTab("upload")}
         >
           File Upload
         </button>
         <button
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === "manual" ? "bg-primary text-white" : "bg-white/5 text-slate-300"}`}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            tab === "manual" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-300"
+          }`}
           onClick={() => setTab("manual")}
         >
           Manual Entry
@@ -160,9 +164,7 @@ export function LabResultsPage() {
             <CardTitle>Upload Documents</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div
-              className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/10 bg-white/5 p-8 text-slate-300"
-            >
+            <div className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300/70 bg-slate-50 p-8 text-slate-600 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
               <Upload className="mb-3 h-10 w-10 text-primary" />
               <p className="text-sm">Drag &amp; drop PDF or imaging files</p>
               <Input type="file" accept="application/pdf,image/*" className="mt-4" onChange={handleFileChange} />
@@ -226,9 +228,9 @@ export function LabResultsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border border-white/5">
-              <table className="w-full text-sm text-white">
-                <thead className="bg-white/5 text-xs uppercase tracking-[0.2em] text-slate-400">
+            <div className="overflow-x-auto rounded-lg border border-slate-200/70 dark:border-white/5">
+              <table className="w-full text-sm text-slate-700 dark:text-white">
+                <thead className="bg-slate-100/80 text-xs uppercase tracking-[0.2em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
                   <tr>
                     <th className="px-3 py-2 text-left">Test Name</th>
                     <th className="px-3 py-2 text-left">Value</th>
@@ -239,7 +241,7 @@ export function LabResultsPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.id} className="border-t border-white/5">
+                    <tr key={row.id} className="border-t border-slate-200/70 dark:border-white/5">
                       <td className="px-3 py-2">
                         <Input value={row.testName} onChange={(event) => updateRow(row.id, "testName", event.target.value)} />
                       </td>
