@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     prev_hash TEXT,
     integrity_hash TEXT NOT NULL,
     tags TEXT[] DEFAULT '{}',
+    details TEXT,
     channel TEXT DEFAULT 'system',
     metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -83,3 +84,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_patient ON audit_log(patient_id);
 CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_log(resource);
 
 ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'system';
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS details TEXT;
