@@ -1,0 +1,31 @@
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0f172a 100%);
+}
+
+.app-shell.collapsed {
+  grid-template-columns: 80px minmax(0, 1fr);
+}
+
+.view-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+}
+
+.content-scroll {
+  height: calc(100vh - 4.5rem);
+}
+
+:root {
+  color: #e2e8f0;
+}
+
+main {
+  color: inherit;
+}
+
+table {
+  border-collapse: collapse;
+}
