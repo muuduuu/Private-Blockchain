@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FlaskConical, Upload } from "lucide-react"
-import { ApiService, MockReferenceData } from "../../services/api"
+import { ApiService } from "../../services/api"
 import { useTransactionStore } from "../../store/transactionStore"
+import { useReferenceStore } from "../../store/referenceStore"
 import { useToast } from "../Toast"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Label } from "../ui/label"
@@ -37,8 +38,8 @@ const uniqueId = () => crypto.randomUUID?.() ?? Math.random().toString(36).slice
 export function LabResultsPage() {
   const [tab, setTab] = useState<"upload" | "manual">("upload")
   const [file, setFile] = useState<File | null>(null)
-  const [patientId, setPatientId] = useState(MockReferenceData.patients[1] ?? "CAMTC-1001")
-  const [technician, setTechnician] = useState(MockReferenceData.providers[2]?.name ?? "Lab Technician")
+  const [patientId, setPatientId] = useState("")
+  const [technician, setTechnician] = useState("")
   const [status, setStatus] = useState(statuses[0])
   const [testType, setTestType] = useState(manualTests[0])
   const [rows, setRows] = useState<ManualRow[]>([
@@ -46,7 +47,24 @@ export function LabResultsPage() {
   ])
   const [submitting, setSubmitting] = useState(false)
   const { addTransaction } = useTransactionStore()
+  const { patientIds, providers, hydrate } = useReferenceStore()
   const { notify } = useToast()
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (!patientId && patientIds[0]) {
+      setPatientId(patientIds[0]!)
+    }
+  }, [patientIds, patientId])
+
+  useEffect(() => {
+    if (!technician && providers[0]) {
+      setTechnician(providers[0]!.name)
+    }
+  }, [providers, technician])
 
   const priority = useMemo(() => {
     if (status === "Critical" || testType === "COVID-19 PCR") return "Tier-1"
@@ -155,7 +173,7 @@ export function LabResultsPage() {
               <div>
                 <Label>Patient ID</Label>
                 <Select value={patientId} onChange={(event) => setPatientId(event.target.value)}>
-                  {MockReferenceData.patients.map((patient) => (
+                  {patientIds.map((patient) => (
                     <option key={patient} value={patient}>
                       {patient}
                     </option>
@@ -165,7 +183,7 @@ export function LabResultsPage() {
               <div>
                 <Label>Lab Technician</Label>
                 <Select value={technician} onChange={(event) => setTechnician(event.target.value)}>
-                  {MockReferenceData.providers.map((provider) => (
+                  {providers.map((provider) => (
                     <option key={provider.id} value={provider.name}>
                       {provider.name}
                     </option>

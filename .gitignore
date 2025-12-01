@@ -1,4 +1,17 @@
 *.pyc
 __pycache__/
-./frontend/node_modules/
-./frontend/dist/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+
+# Backend build artifacts and runtime state
+backend_gen/node_modules/
+backend_gen/dist/
+backend_gen/data_storage/
+backend_gen/.ts-node/
+backend_gen/.cache/
+
+# Environment / secrets
+*.env
+*.env.local

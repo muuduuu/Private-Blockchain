@@ -5,8 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { AlertTriangle, Activity, ThermometerSun, HeartPulse, Gauge } from "lucide-react"
 import { ApiService } from "../../services/api"
 import { useTransactionStore } from "../../store/transactionStore"
+import { useReferenceStore } from "../../store/referenceStore"
 import { useToast } from "../Toast"
-import type { ProviderOption } from "../../types"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
@@ -49,14 +49,14 @@ export function EmergencyPage() {
       providerId: "",
     },
   })
-  const [providers, setProviders] = useState<ProviderOption[]>([])
   const [submitting, setSubmitting] = useState(false)
   const { addTransaction, fetchTransactions } = useTransactionStore()
+  const { providers, hydrate } = useReferenceStore()
   const { notify } = useToast()
 
   useEffect(() => {
-    ApiService.fetchProviders().then(setProviders)
-  }, [])
+    void hydrate()
+  }, [hydrate])
 
   const watched = form.watch()
   const priorityScore = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { HeartPulse, Activity, Thermometer, ShieldAlert } from "lucide-react"
 import {
@@ -10,7 +10,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts"
-import { MockReferenceData } from "../../services/api"
+import { useReferenceStore } from "../../store/referenceStore"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Label } from "../ui/label"
 import { Input } from "../ui/input"
@@ -34,15 +34,26 @@ const baseVitals = {
 }
 
 export function VitalSignsPage() {
-  const [patient, setPatient] = useState(MockReferenceData.patients[2] ?? "CAMTC-1002")
+  const [patient, setPatient] = useState("")
   const [vitals, setVitals] = useState(baseVitals)
   const { notify } = useToast()
+  const { patientIds, hydrate } = useReferenceStore()
   const wsUrl = import.meta.env.VITE_WS_URL ? `${import.meta.env.VITE_WS_URL}/ws/vitals/${patient}` : undefined
   const { status } = useWebSocket(wsUrl)
 
   const form = useForm<VitalForm>({
     defaultValues: baseVitals,
   })
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (!patient && patientIds[0]) {
+      setPatient(patientIds[0]!)
+    }
+  }, [patientIds, patient])
 
   const alerts = useMemo(() => {
     const badges = [] as string[]
@@ -88,7 +99,7 @@ export function VitalSignsPage() {
           <Label>Patient ID</Label>
           <Input list="patient-options" value={patient} onChange={(event) => setPatient(event.target.value)} />
           <datalist id="patient-options">
-            {MockReferenceData.patients.map((p) => (
+            {patientIds.map((p) => (
               <option key={p} value={p} />
             ))}
           </datalist>

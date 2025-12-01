@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Pill, ShieldAlert } from "lucide-react"
-import { ApiService, MockReferenceData } from "../../services/api"
+import { ApiService } from "../../services/api"
 import { useTransactionStore } from "../../store/transactionStore"
+import { useReferenceStore } from "../../store/referenceStore"
 import { useToast } from "../Toast"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Label } from "../ui/label"
@@ -35,14 +36,14 @@ export function PharmacyPage() {
   const form = useForm<PrescriptionForm>({
     resolver: zodResolver(prescriptionSchema),
     defaultValues: {
-      patientId: MockReferenceData.patients[0] ?? "CAMTC-1000",
+      patientId: "",
       medication: medications[0],
       dosage: 25,
       unit: "mg",
       frequency: frequencies[0],
       quantity: 30,
       refills: 1,
-      provider: MockReferenceData.providers[0]?.name ?? "Dr. Elena Martinez",
+      provider: "",
       instructions: "Take with food",
       controlled: false,
     },
@@ -50,7 +51,24 @@ export function PharmacyPage() {
 
   const [submitting, setSubmitting] = useState(false)
   const { addTransaction } = useTransactionStore()
+  const { providers, patientIds, hydrate } = useReferenceStore()
   const { notify } = useToast()
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (patientIds.length > 0 && !form.getValues("patientId")) {
+      form.setValue("patientId", patientIds[0]!)
+    }
+  }, [patientIds, form])
+
+  useEffect(() => {
+    if (providers.length > 0 && !form.getValues("provider")) {
+      form.setValue("provider", providers[0]!.name)
+    }
+  }, [providers, form])
 
   const watchAll = form.watch()
   const priority = useMemo(() => {
@@ -106,7 +124,7 @@ export function PharmacyPage() {
               <div>
                 <Label>Patient ID</Label>
                 <Select {...form.register("patientId")}>
-                  {MockReferenceData.patients.map((patient) => (
+                  {patientIds.map((patient) => (
                     <option key={patient} value={patient}>
                       {patient}
                     </option>
@@ -116,7 +134,7 @@ export function PharmacyPage() {
               <div>
                 <Label>Provider / Prescriber</Label>
                 <Select {...form.register("provider")}>
-                  {MockReferenceData.providers.map((provider) => (
+                  {providers.map((provider) => (
                     <option key={provider.id} value={provider.name}>
                       {provider.name}
                     </option>
